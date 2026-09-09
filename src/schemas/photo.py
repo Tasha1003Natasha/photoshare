@@ -3,8 +3,7 @@ from .tag import TagResponse
 
 
 class PhotoSchema(BaseModel):
-    url: str = Field(max_length=255)
-    tags: list[TagResponse] = Field(default_factory=list, max_length=5)
+    tags: list[str] = Field(default_factory=list, max_length=5)
     description: str | None = Field(default=None, max_length=250)
 
 
@@ -16,7 +15,7 @@ class PhotoUpdateSchema(BaseModel):
 class PhotoResponse(BaseModel):
     id: int
     url: str
-    description:  str | None = None
-    tags: list[TagResponse]
+    description: str | None = None
+    tags: list[TagResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
