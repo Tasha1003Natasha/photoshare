@@ -53,3 +53,14 @@ async def create_photo(
     await db.refresh(photo)
     await db.refresh(photo, attribute_names=["tags"])
     return photo
+
+
+async def delete_photo(photo_id: int, db: AsyncSession):
+
+    stmt = select(Photo).filter_by(id=photo_id)
+    photo = await db.execute(stmt)
+    photo = photo.scalar_one_or_none()
+    if photo:
+        await db.delete(photo)
+        await db.commit()
+    return photo
