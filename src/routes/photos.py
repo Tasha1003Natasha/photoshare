@@ -31,7 +31,7 @@ async def get_photos(limit: int = Query(10, ge=10, le=500), offset: int = Query(
     return photos
 
 
-@router.post("/", response_model=PhotoResponse)
+@router.post("/upload", response_model=PhotoResponse)
 async def upload_photo(
     file: UploadFile = File(...),
     description: str | None = Form(None, max_length=250),
