@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, timedelta
 from src.entity.photo import Photo
-from src.schemas.photo import PhotoSchema
+from src.schemas.photo import PhotoSchema, PhotoUpdateSchema
 from src.database.db import get_db
 from fastapi import APIRouter, Depends
 from src.entity.tag import Tag
@@ -63,4 +63,24 @@ async def delete_photo(photo_id: int, db: AsyncSession):
     if photo:
         await db.delete(photo)
         await db.commit()
+    return photo
+
+
+async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession):
+
+    stmt = select(Photo).filter_by(id=photo_id)
+    photo = await db.execute(stmt)
+    photo = photo.scalar_one_or_none()
+    if photo:
+        photo.description = body.description
+        await db.commit()
+        await db.refresh(photo)
+    return photo
+
+
+async def get_photo(photo_id: int, db: AsyncSession):
+
+    stmt = select(Photo).filter_by(id=photo_id)
+    photo = await db.execute(stmt)
+    photo = photo.scalar_one_or_none()
     return photo
