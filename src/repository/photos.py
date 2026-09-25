@@ -10,23 +10,9 @@ from src.repository.tags import get_or_create_tags
 from sqlalchemy.orm import selectinload
 
 
-async def get_photos(limit: int, offset: int, query: str | None,
-                     db: AsyncSession):
-    stmt = select(Photo).options(selectinload(Photo.tags))
-
-    if query:
-        stmt = stmt.where(
-            Photo.url.ilike(f"%{query}%")
-        )
-
-    stmt = stmt.offset(offset).limit(limit)
-    photos = await db.execute(stmt)
-
-    return photos.scalars().all()
-
-
 async def create_photo(
     url: str,
+    public_id: str,
     body: PhotoSchema,
     db: AsyncSession,
     tags: list[Tag]
@@ -34,6 +20,7 @@ async def create_photo(
 
     photo = Photo(
         url=url,
+        public_id=public_id,
         description=body.description,
         tags=tags,
 
@@ -59,7 +46,8 @@ async def delete_photo(photo_id: int, db: AsyncSession):
 
 async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession):
 
-    stmt = select(Photo).options(selectinload(Photo.tags)).filter_by(id=photo_id)
+    stmt = select(Photo).options(
+        selectinload(Photo.tags)).filter_by(id=photo_id)
     photo = await db.execute(stmt)
     photo = photo.scalar_one_or_none()
     if photo:

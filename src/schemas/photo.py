@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, StringConstraints
 from .tag import TagResponse
+from typing import Literal
 
 
 class PhotoSchema(BaseModel):
@@ -21,3 +22,8 @@ class PhotoResponse(BaseModel):
     tags: list[TagResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TransformResponse(BaseModel):
+    photo_id: int
+    url: str

@@ -16,4 +16,4 @@ async def upload_to_cloudinary(file: UploadFile) -> str:
             detail="Failed to upload the photo. Please try again later.",
         ) from err
 
-    return result["secure_url"]
+    return result["secure_url"], result["public_id"]
