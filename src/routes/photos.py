@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.db import get_db
 from src.repository import photos as repositories_photos
+from src.repository.tags import get_or_create_tags
 from src.schemas.photo import PhotoResponse, PhotoSchema, PhotoUpdateSchema
 from src.services.cloudinary import upload_to_cloudinary
 from src.conf.config import config
@@ -41,23 +42,23 @@ async def upload_photo(
     tags: list[str] | None = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
-    url = await upload_to_cloudinary(file)
+    tag_names = [name.strip() for value in (tags or [])
+                 for name in value.split(",")]
 
-    tag_names = [
-        name.strip()
-        for name in (tags or [])
-        if name.strip()
-    ]
+    photo_tags = await get_or_create_tags(tag_names, db)
 
     body = PhotoSchema(
         description=description,
         tags=tag_names
     )
 
+    url = await upload_to_cloudinary(file)
+
     photo = await repositories_photos.create_photo(
         url=url,
         body=body,
-        db=db
+        db=db,
+        tags=photo_tags
     )
 
     return photo

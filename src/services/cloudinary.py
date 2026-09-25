@@ -13,7 +13,7 @@ async def upload_to_cloudinary(file: UploadFile) -> str:
     except CloudinaryError as err:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Не вдалося завантажити світлину. Спробуйте пізніше.",
+            detail="Failed to upload the photo. Please try again later.",
         ) from err
 
     return result["secure_url"]

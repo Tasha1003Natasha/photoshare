@@ -11,7 +11,7 @@ class PhotoSchema(BaseModel):
 
 class PhotoUpdateSchema(BaseModel):
     description: str | None = Field(default=None, max_length=250)
-    # tags: list[TagResponse] = Field(default_factory=list, max_length=5)
+    tags: list[str] | None = Field(default=None, max_length=5)
 
 
 class PhotoResponse(BaseModel):
