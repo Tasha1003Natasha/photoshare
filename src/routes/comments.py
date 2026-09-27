@@ -43,3 +43,13 @@ async def update_comment(body: CommentUpdateSchema, comment_id: int = Path(ge=1)
 async def delete_comment(comment_id: int = Path(ge=1), db: AsyncSession = Depends(get_db)):
     comment = await repository_comments.delete_comment(comment_id, db)
     return comment
+
+
+@router.get("/photos/{photo_id}/comments", response_model=list[CommentResponse])
+async def get_comments(photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db)):
+    photo = await repositories_photos.get_photo(photo_id, db)
+
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    return await repository_comments.get_comments(photo_id, db)
