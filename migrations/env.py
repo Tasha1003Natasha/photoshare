@@ -12,6 +12,7 @@ from src.entity.models import Base
 from src.entity.photo import Photo
 from src.entity.tag import Tag
 from src.entity.comment import Comment
+from src.entity.transformation import PhotoTransformation
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

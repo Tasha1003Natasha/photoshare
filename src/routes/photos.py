@@ -1,7 +1,8 @@
 
-from cloudinary import CloudinaryImage
+
 import cloudinary.uploader
 from cloudinary.exceptions import Error as CloudinaryError
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Depends, status, Path, Query, UploadFile, File, Form
 from fastapi.responses import RedirectResponse
@@ -9,10 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.db import get_db
 from src.repository import photos as repositories_photos
+from src.repository import transformations
 from src.repository.tags import get_or_create_tags
 from src.schemas.photo import PhotoResponse, PhotoSchema, PhotoUpdateSchema, TransformResponse
-from src.services.cloudinary import upload_to_cloudinary
+from src.services.cloudinary import upload_to_cloudinary, build_transformed_url
 from src.conf.config import config
+from src.services.qr_code import create_and_store_qr
 
 
 router = APIRouter(prefix='/photos', tags=['photos'])
@@ -23,27 +26,6 @@ cloudinary.config(
     api_secret=config.CLD_API_SECRET,
     secure=True,
 )
-
-TRANSFORMATIONS = {
-    "avatar": [
-        {
-            "gravity": "face",
-            "height": 200,
-            "width": 200,
-            "crop": "thumb",
-        },
-        {"radius": "max"},
-        {"fetch_format": "auto"},
-    ],
-    "resize": [
-        {"width": 800, "height": 800, "crop": "limit"},
-        {"fetch_format": "auto"},
-    ],
-    "grayscale": [
-        {"effect": "grayscale"},
-        {"fetch_format": "auto"},
-    ],
-}
 
 
 @router.post("/upload", response_model=PhotoResponse)
@@ -91,43 +73,43 @@ async def update_photo(body: PhotoUpdateSchema, photo_id: int = Path(ge=1), db: 
     return photo
 
 
-@router.get("/{photo_id}", response_model=PhotoResponse)
-async def get_photo(photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db)):
+@router.get("/{photo_id}", response_class=RedirectResponse)
+async def get_photo(
+    photo_id: int = Path(ge=1),
+    transformation: Literal["avatar", "resize", "grayscale"] | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
     photo = await repositories_photos.get_photo(photo_id, db)
     if photo is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
+    if transformation is not None:
+        if not photo.public_id:
+            raise HTTPException(status_code=409, detail="Photo has no Cloudinary public_id")
+        return RedirectResponse(url=build_transformed_url(photo.public_id, transformation))
     return RedirectResponse(url=photo.url)
 
 
-@router.post("/transform", response_model=TransformResponse)
-async def transform_photos(photo_id: int = Query(..., ge=1),
-                           transformation: str = Query(
-    ...,
-    description="Available values: avatar, resize, grayscale",
-),
-        db: AsyncSession = Depends(get_db)):
-
-    if transformation not in TRANSFORMATIONS:
-        raise HTTPException(
-            status_code=422,
-            detail="Available transformations: avatar, resize, grayscale",
-        )
-
+@router.post("/qrcode", response_model=TransformResponse, status_code=201)
+@router.post("/transform", response_model=TransformResponse, status_code=201)
+async def transform_photos(
+    photo_id: int = Query(..., ge=1),
+    transformation: Literal["avatar", "resize", "grayscale"] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
     photo = await repositories_photos.get_photo(photo_id, db)
-
     if photo is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
+        raise HTTPException(status_code=404, detail="Photo not found")
+    if not photo.public_id:
+        raise HTTPException(status_code=409, detail="Photo has no Cloudinary public_id")
 
-    print("🚀 ~ photo:", photo)
+    image_url = build_transformed_url(photo.public_id, transformation)
+    qr_code_url = await create_and_store_qr(image_url)
 
-    transformed_url = CloudinaryImage(photo.public_id).build_url(
-        transformation=TRANSFORMATIONS[transformation],
-        secure=True,
-    )
-    print("🚀 ~ transformed_url:", transformed_url)
-    return TransformResponse(
+    return await transformations.create(
         photo_id=photo.id,
-        url=transformed_url,
+        transformation=transformation,
+        image_url=image_url,
+        qr_code_url=qr_code_url,
+        db=db,
     )
