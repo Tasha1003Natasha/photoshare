@@ -10,6 +10,21 @@ from src.repository.tags import get_or_create_tags
 from sqlalchemy.orm import selectinload
 
 
+async def get_photos(limit: int, offset: int, query: str | None,
+                     db: AsyncSession):
+    stmt = select(Photo).options(selectinload(Photo.tags))
+
+    if query:
+        stmt = stmt.where(
+            Photo.url.ilike(f"%{query}%")
+        )
+
+    stmt = stmt.offset(offset).limit(limit)
+    photos = await db.execute(stmt)
+
+    return photos.scalars().all()
+
+
 async def create_photo(
     url: str,
     public_id: str,

@@ -28,6 +28,14 @@ cloudinary.config(
 )
 
 
+@router.get("/all", response_model=list[PhotoResponse])
+async def get_photos(limit: int = Query(10, ge=10, le=500), offset: int = Query(0, ge=0),
+                     query: str | None = Query(None),
+                     db: AsyncSession = Depends(get_db)):
+    photos = await repositories_photos.get_photos(limit, offset, query, db)
+    return photos
+
+
 @router.post("/upload", response_model=PhotoResponse)
 async def upload_photo(
     file: UploadFile = File(...),
