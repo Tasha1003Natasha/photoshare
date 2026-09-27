@@ -1,11 +1,13 @@
 """PhotoShare application entry point."""
 
 import re
+from pathlib import Path
 from ipaddress import ip_address
 from typing import Callable
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,9 +42,7 @@ async def user_agent_ban_middleware(request: Request, call_next: Callable):
     
     :param request: Incoming HTTP request.
     :param call_next: Callable that dispatches the request to the next handler."""
-    print(request.headers.get("Authorization"))
-    user_agent = request.headers.get("user-agent")
-    print(user_agent)
+    user_agent = request.headers.get("user-agent", "")
     for ban_pattern in user_agent_ban_list:
         if re.search(ban_pattern, user_agent):
             return JSONResponse(
@@ -56,6 +56,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(comments.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.mount("/app", StaticFiles(directory=Path(__file__).parent / "frontend", html=True), name="frontend")
 
 
 @app.get("/")

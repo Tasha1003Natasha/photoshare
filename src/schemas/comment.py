@@ -26,6 +26,7 @@ class CommentUpdateSchema(CommentSchema):
 class CommentResponse(BaseModel):
     """Validated CommentResponse data contract for API requests or responses."""
     id: int
+    user_id: int | None = None
     text: str
     photo_id: int
     created_at: datetime

@@ -6,7 +6,7 @@ import cloudinary.uploader
 from cloudinary.exceptions import Error as CloudinaryError
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Depends, status, Path, Query, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, status, Path, Query, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,7 +94,9 @@ async def delete_photo(photo_id: int = Path(ge=1), db: AsyncSession = Depends(ge
     :param db: Active asynchronous database session.
     :param user: Authenticated user used for ownership or role checks."""
     photo = await repositories_photos.delete_photo(photo_id, db, user)
-    return photo
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.put("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT, )
@@ -109,7 +111,7 @@ async def update_photo(body: PhotoUpdateSchema, photo_id: int = Path(ge=1), db: 
     if photo is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
-    return photo
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{photo_id}", response_class=RedirectResponse)

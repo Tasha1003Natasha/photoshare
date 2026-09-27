@@ -20,6 +20,7 @@ class PhotoUpdateSchema(BaseModel):
 class PhotoResponse(BaseModel):
     """Validated PhotoResponse data contract for API requests or responses."""
     id: int
+    user_id: int | None = None
     url: str
     description: str | None = None
     tags: list[TagResponse] = Field(default_factory=list)

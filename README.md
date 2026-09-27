@@ -28,7 +28,10 @@ Run these commands from the project root.
    uvicorn main:app --reload
    ```
 
-Open http://localhost:8000/docs to explore the API. Register, confirm your email,
+Open http://localhost:8000/app/ to use the frontend, or http://localhost:8000/docs
+to explore the API. The frontend requires no separate server or build step.
+See [frontend/README.md](frontend/README.md) for supported workflows and checks.
+Register, confirm your email,
 then log in. The first registered user in an empty database becomes an administrator.
 
 ## Project documentation
