@@ -1,3 +1,5 @@
+"""PhotoShare services: rate limiter."""
+
 import redis.asyncio as redis
 from fastapi import Depends, HTTPException, Request, status
 
@@ -7,7 +9,12 @@ from src.services.auth import auth_service
 
 
 class RateLimiter:
+    """Redis-backed per-user, method and path fixed-window request limiter."""
     def __init__(self, times: int = 5, seconds: int = 60):
+        """Configure the Redis client and request quota.
+        
+        :param times: Maximum requests per user, method and path in the window.
+        :param seconds: Rate-limit window length in seconds."""
         self.times = times
         self.seconds = seconds
         self.cache = redis.Redis(
@@ -24,6 +31,10 @@ class RateLimiter:
         request: Request,
         user: User = Depends(auth_service.get_current_user),
     ):
+        """Count a request and raise HTTP 429 when the configured quota is exceeded.
+        
+        :param request: Incoming HTTP request.
+        :param user: Authenticated user used for ownership or role checks."""
         key = f"rate_limit:{user.id}:{request.method}:{request.url.path}"
         requests_count = await self.cache.incr(key)
 

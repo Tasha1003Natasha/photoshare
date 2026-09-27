@@ -1,3 +1,5 @@
+"""PhotoShare entity: photo."""
+
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,6 +13,7 @@ if TYPE_CHECKING:
 
 
 class Photo(Base):
+    """Uploaded photo metadata, owner, tags and related comments."""
     __tablename__ = "photos"
     id: Mapped[int] = mapped_column(primary_key=True)
     url: Mapped[str] = mapped_column(String(255), nullable=False)

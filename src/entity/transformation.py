@@ -1,9 +1,12 @@
+"""PhotoShare entity: transformation."""
+
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from src.entity.models import Base
 
 
 class PhotoTransformation(Base):
+    """Saved transformed image URL and optional generated QR URL."""
     __tablename__ = "photo_transformations"
 
     id: Mapped[int] = mapped_column(primary_key=True)

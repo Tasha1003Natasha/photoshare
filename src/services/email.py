@@ -1,3 +1,5 @@
+"""PhotoShare services: email."""
+
 from pathlib import Path
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
@@ -24,6 +26,11 @@ conf = ConnectionConfig(
 
 
 async def send_email(email: EmailStr, username: str, host: str):
+    """Send an HTML email-verification link; print mail connection errors.
+    
+    :param email: Email identifying the user.
+    :param username: Display name included in the email.
+    :param host: Application base URL used in the email link."""
     try:
         token_verification = auth_service.create_email_token({"sub": email})
         message = MessageSchema(
@@ -41,6 +48,11 @@ async def send_email(email: EmailStr, username: str, host: str):
 
 
 async def send_password_reset_email(email: EmailStr, username: str, host: str):
+    """Send an HTML password-reset link with a signed reset token.
+    
+    :param email: Email identifying the user.
+    :param username: Display name included in the email.
+    :param host: Application base URL used in the email link."""
     token = auth_service.create_password_reset_token({"sub": email})
 
     message = MessageSchema(

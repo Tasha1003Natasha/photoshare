@@ -1,3 +1,5 @@
+"""PhotoShare entity: tag."""
+
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String
@@ -9,6 +11,7 @@ if TYPE_CHECKING:
 
 
 class Tag(Base):
+    """Globally unique tag shared by multiple photos."""
     __tablename__ = "tags"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(

@@ -1,3 +1,5 @@
+"""PhotoShare routes: auth."""
+
 from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,12 @@ get_refresh_token = HTTPBearer()
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED,)
 async def signup(body: UserSchema, bt: BackgroundTasks, request: Request, db: AsyncSession = Depends(get_db)):
+    """Hash a registration password, create the account and schedule verification email.
+    
+    :param body: Validated request data.
+    :param bt: FastAPI background-task collector.
+    :param request: Incoming HTTP request.
+    :param db: Active asynchronous database session."""
     exist_user = await repositories_users.get_user_by_email(body.email, db)
     if exist_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
@@ -27,6 +35,10 @@ async def signup(body: UserSchema, bt: BackgroundTasks, request: Request, db: As
 
 @router.post("/login",  response_model=TokenSchema)
 async def login(body: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    """Validate credentials and email confirmation, then issue and store JWT credentials.
+    
+    :param body: Validated request data.
+    :param db: Active asynchronous database session."""
     user = await repositories_users.get_user_by_email(body.username, db)
     if user is None:
         raise HTTPException(
@@ -47,6 +59,10 @@ async def login(body: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 @router.get('/refresh_token',  response_model=TokenSchema)
 async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(get_refresh_token),
                         db: AsyncSession = Depends(get_db)):
+    """Validate the stored refresh token and issue replacement access and refresh tokens.
+    
+    :param credentials: Bearer credentials containing the refresh token.
+    :param db: Active asynchronous database session."""
     token = credentials.credentials
     email = await auth_service.decode_refresh_token(token)
     user = await repositories_users.get_user_by_email(email, db)
@@ -63,6 +79,10 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(get_
 
 @router.get('/confirmed_email/{token}')
 async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
+    """Confirm a registered email address.
+    
+    :param token: Signed JWT, or None when clearing a stored refresh token.
+    :param db: Active asynchronous database session."""
     email = await auth_service.get_email_from_token(token)
     user = await repositories_users.get_user_by_email(email, db)
     if user is None:
@@ -77,6 +97,12 @@ async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
 @router.post('/request_email')
 async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, request: Request,
                         db: AsyncSession = Depends(get_db)):
+    """Schedule verification email for an existing unconfirmed account.
+    
+    :param body: Validated request data.
+    :param background_tasks: FastAPI background-task collector.
+    :param request: Incoming HTTP request.
+    :param db: Active asynchronous database session."""
     user = await repositories_users.get_user_by_email(body.email, db)
 
     if user is None:
@@ -97,6 +123,12 @@ async def request_password_reset(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
+    """Schedule reset email without revealing whether the account exists.
+    
+    :param body: Validated request data.
+    :param background_tasks: FastAPI background-task collector.
+    :param request: Incoming HTTP request.
+    :param db: Active asynchronous database session."""
     user = await repositories_users.get_user_by_email(body.email, db)
 
     if user:
@@ -115,6 +147,10 @@ async def reset_password(
     body: ResetPassword,
     db: AsyncSession = Depends(get_db)
 ):
+    """Validate a reset token, hash the new password and clear the refresh token.
+    
+    :param body: Validated request data.
+    :param db: Active asynchronous database session."""
     email = await auth_service.get_email_from_password_reset_token(body.token)
     user = await repositories_users.get_user_by_email(email, db)
 

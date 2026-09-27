@@ -36,3 +36,4 @@ pytest-asyncio>=0.24,<1.0
 aiosqlite>=0.20,<1.0
 qrcode==8.2
 Pillow==12.3.0
+sphinx==9.1.0

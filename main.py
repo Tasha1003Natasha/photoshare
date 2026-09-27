@@ -1,3 +1,5 @@
+"""PhotoShare application entry point."""
+
 import re
 from ipaddress import ip_address
 from typing import Callable
@@ -34,6 +36,10 @@ user_agent_ban_list = [r"Googlebot", r"Python-urllib"]
 
 @app.middleware("http")
 async def user_agent_ban_middleware(request: Request, call_next: Callable):
+    """Reject matching User-Agent patterns before dispatching the request.
+    
+    :param request: Incoming HTTP request.
+    :param call_next: Callable that dispatches the request to the next handler."""
     print(request.headers.get("Authorization"))
     user_agent = request.headers.get("user-agent")
     print(user_agent)
@@ -54,11 +60,15 @@ app.include_router(users.router, prefix="/api")
 
 @app.get("/")
 def index():
+    """Return the application welcome message."""
     return {"message": "PhotoShare Application"}
 
 
 @app.get("/api/healthchecker")
 async def healthchecker(db: AsyncSession = Depends(get_db)):
+    """Execute a lightweight database query and return service health.
+    
+    :param db: Active asynchronous database session."""
     try:
         result = await db.execute(text("SELECT 1"))
         result = result.fetchone()

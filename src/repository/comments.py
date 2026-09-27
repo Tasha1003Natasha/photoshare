@@ -1,3 +1,5 @@
+"""PhotoShare repository: comments."""
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.entity.comment import Comment
 from sqlalchemy import select
@@ -8,6 +10,13 @@ from src.entity.models import User, Role
 
 async def create_comment(photo_id: int, text: str, db: AsyncSession, user_id: int) -> Comment:
 
+    """Save a comment with its photo ID and authenticated author ID.
+    
+    :param photo_id: Database ID of the original photo.
+    :param text: Comment text.
+    :param db: Active asynchronous database session.
+    :param user_id: Database ID of the owner or author; supplied by the server.
+    :returns: Saved comment including generated timestamps."""
     comment = Comment(
         photo_id=photo_id,
         text=text,
@@ -28,6 +37,13 @@ async def create_comment(photo_id: int, text: str, db: AsyncSession, user_id: in
 
 async def update_comment(comment_id: int, body: CommentSchema, db: AsyncSession, user: User):
 
+    """Update a comment only when the current user is its author.
+    
+    :param comment_id: Database ID of the comment.
+    :param body: Validated request data.
+    :param db: Active asynchronous database session.
+    :param user: Authenticated user used for ownership or role checks.
+    :returns: Updated comment, or None for a missing or another author’s comment."""
     stmt = select(Comment).where(
         Comment.id == comment_id,
         Comment.user_id == user.id,
@@ -46,6 +62,14 @@ async def update_comment(comment_id: int, body: CommentSchema, db: AsyncSession,
 
 async def delete_comment(comment_id: int,  db: AsyncSession, user: User):
 
+    """Delete a comment only for an administrator or moderator.
+    
+    :param comment_id: Database ID of the comment.
+    :param db: Active asynchronous database session.
+    :param user: Authenticated user used for ownership or role checks.
+    :returns: Deleted comment, or None when no comment exists.
+    
+    A user role other than administrator or moderator raises HTTP 403, even for the author’s own comment."""
     stmt = select(Comment).filter_by(id=comment_id)
 
     if user.role not in (Role.admin, Role.moderator):
@@ -60,6 +84,11 @@ async def delete_comment(comment_id: int,  db: AsyncSession, user: User):
 
 
 async def get_comments(photo_id: int, db: AsyncSession):
+    """List a photo’s comments ordered by creation time and ID.
+    
+    :param photo_id: Database ID of the original photo.
+    :param db: Active asynchronous database session.
+    :returns: Sequence of comments; empty when no matching comments exist."""
     stmt = (
         select(Comment)
         .where(Comment.photo_id == photo_id)

@@ -1,3 +1,5 @@
+"""PhotoShare entity: comment."""
+
 from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +8,7 @@ from .models import Base
 
 
 class Comment(Base):
+    """Comment text, optional legacy author, photo and creation/edit timestamps."""
     __tablename__ = "comments"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(

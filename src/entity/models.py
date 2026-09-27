@@ -1,3 +1,5 @@
+"""PhotoShare entity: models."""
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column, ForeignKey, Table, String,  DateTime,  func, Enum, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
@@ -6,6 +8,7 @@ from datetime import date
 
 
 class Base(DeclarativeBase):
+    """Shared SQLAlchemy declarative base for application tables."""
     pass
 
 
@@ -26,12 +29,14 @@ photo_tags = Table(
 
 
 class Role(enum.Enum):
+    """Supported account roles: user, moderator and administrator."""
     admin: str = "admin"
     moderator: str = "moderator"
     user: str = "user"
 
 
 class User(Base):
+    """Account credentials, role, email confirmation and profile metadata."""
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(50))

@@ -1,3 +1,5 @@
+"""PhotoShare routes: users."""
+
 import pickle
 
 import cloudinary
@@ -37,11 +39,19 @@ cloudinary.config(
     dependencies=[Depends(RateLimiter(times=1, seconds=20))],
 )
 async def get_current_user(user: User = Depends(auth_service.get_current_user)):
+    """Resolve the authenticated user after validating an access JWT.
+    
+    :param user: Authenticated user used for ownership or role checks.
+    
+    Access JWT scope and expiration are checked. User objects are cached in Redis for 300 seconds; role changes must invalidate that cache."""
     return user
 
 
 @router.get("/admin", response_model=dict[str, str])
 async def admin_access(user: User = Depends(auth_service.get_current_user)):
+    """Allow only administrators to access this diagnostic endpoint.
+    
+    :param user: Authenticated user used for ownership or role checks."""
     if user.role != Role.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -52,6 +62,9 @@ async def admin_access(user: User = Depends(auth_service.get_current_user)):
 
 @router.get("/moderator", response_model=dict[str, str])
 async def moderator_access(user: User = Depends(auth_service.get_current_user)):
+    """Allow moderators and administrators to access this diagnostic endpoint.
+    
+    :param user: Authenticated user used for ownership or role checks."""
     if user.role not in (Role.admin, Role.moderator):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -67,6 +80,13 @@ async def change_user_role(
     user: User = Depends(auth_service.get_current_user),
 ):
     # Read current permissions from the database rather than the cached user.
+    """Check administrator rights in the database, change a role and evict the target cache.
+    
+    :param body: Validated request data.
+    :param db: Active asynchronous database session.
+    :param user: Authenticated user used for ownership or role checks.
+    
+    Missing target accounts raise HTTP 404; callers without current administrator rights receive HTTP 403."""
     admin = await repositories_users.get_user_by_email(user.email, db)
     if admin is None or admin.role != Role.admin:
         raise HTTPException(status_code=403, detail="Administrator access required")
@@ -90,6 +110,11 @@ async def update_avatar_user(
     user: User = Depends(auth_service.get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Replace the authenticated user’s avatar and refresh the cached user.
+    
+    :param file: Incoming file uploaded through FastAPI.
+    :param user: Authenticated user used for ownership or role checks.
+    :param db: Active asynchronous database session."""
     public_id = f"Web16/{user.email}"
     try:
         res = cloudinary.uploader.upload(
