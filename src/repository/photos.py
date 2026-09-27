@@ -8,6 +8,7 @@ from src.database.db import get_db
 from fastapi import APIRouter, Depends
 from src.repository.tags import get_or_create_tags
 from sqlalchemy.orm import selectinload
+from src.entity.models import User, Role
 
 
 async def get_photos(limit: int, offset: int, query: str | None,
@@ -48,21 +49,14 @@ async def create_photo(
     return photo
 
 
-async def delete_photo(photo_id: int, db: AsyncSession):
-
-    stmt = select(Photo).filter_by(id=photo_id)
-    photo = await db.execute(stmt)
-    photo = photo.scalar_one_or_none()
-    if photo:
-        await db.delete(photo)
-        await db.commit()
-    return photo
-
-
-async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession):
+async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession, user: User):
 
     stmt = select(Photo).options(
-        selectinload(Photo.tags)).filter_by(id=photo_id)
+        selectinload(Photo.tags)).filter_by(id=photo_id, user=user)
+
+    if user.role != Role.admin:
+        stmt = stmt.where(Photo.user_id == user.id)
+
     photo = await db.execute(stmt)
     photo = photo.scalar_one_or_none()
     if photo:
@@ -75,9 +69,28 @@ async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession)
     return photo
 
 
-async def get_photo(photo_id: int, db: AsyncSession):
+async def delete_photo(photo_id: int, db: AsyncSession, user: User):
 
-    stmt = select(Photo).filter_by(id=photo_id)
+    stmt = select(Photo).filter_by(id=photo_id, user=user)
+
+    if user.role != Role.admin:
+        stmt = stmt.where(Photo.user_id == user.id)
+
+    photo = await db.execute(stmt)
+    photo = photo.scalar_one_or_none()
+    if photo:
+        await db.delete(photo)
+        await db.commit()
+    return photo
+
+
+async def get_photo(photo_id: int, db: AsyncSession, user: User):
+
+    stmt = select(Photo).filter_by(id=photo_id, user=user)
+
+    if user.role != Role.admin:
+        stmt = stmt.where(Photo.user_id == user.id)
+
     photo = await db.execute(stmt)
     photo = photo.scalar_one_or_none()
     return photo

@@ -1,6 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from src.entity.models import User
 from src.entity.transformation import PhotoTransformation
+from src.entity.photo import Photo
+from sqlalchemy import select
 
 
 async def create_transform(
@@ -27,8 +29,19 @@ async def create_transform(
 async def get_by_id(
     transformation_id: int,
     db: AsyncSession,
+    user: User,
 ) -> PhotoTransformation | None:
-    return await db.get(PhotoTransformation, transformation_id)
+    stmt = (
+        select(PhotoTransformation)
+        .join(Photo, Photo.id == PhotoTransformation.photo_id)
+        .where(
+            PhotoTransformation.id == transformation_id,
+            Photo.user_id == user.id,
+        )
+    )
+
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def set_qr_code(

@@ -7,8 +7,6 @@ class PhotoSchema(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=5)
     description: str | None = Field(default=None, max_length=250)
 
-# ///change then completed ///////////////////
-
 
 class PhotoUpdateSchema(BaseModel):
     description: str | None = Field(default=None, max_length=250)

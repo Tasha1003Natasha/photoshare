@@ -1,7 +1,7 @@
 
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String,  Text
+from sqlalchemy import String, Text, ForeignKey
 from .models import Base, photo_tags
 
 
@@ -31,4 +31,9 @@ class Photo(Base):
         "Comment",
         back_populates="photo",
         cascade="all, delete-orphan",
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
     )

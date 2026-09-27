@@ -2,14 +2,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.entity.comment import Comment
 from sqlalchemy import select
 from src.schemas.comment import CommentSchema
-from src.entity.photo import Photo
+from fastapi import HTTPException
+from src.entity.models import User, Role
 
 
-async def create_comment(photo_id: int, text: str, db: AsyncSession) -> Comment:
+async def create_comment(photo_id: int, text: str, db: AsyncSession, user_id: int) -> Comment:
 
     comment = Comment(
         photo_id=photo_id,
         text=text,
+        user_id=user_id,
     )
 
     db.add(comment)
@@ -24,9 +26,13 @@ async def create_comment(photo_id: int, text: str, db: AsyncSession) -> Comment:
     return comment
 
 
-async def update_comment(comment_id: int, body: CommentSchema, db: AsyncSession):
+async def update_comment(comment_id: int, body: CommentSchema, db: AsyncSession, user: User):
 
-    stmt = select(Comment).filter_by(id=comment_id)
+    stmt = select(Comment).where(
+        Comment.id == comment_id,
+        Comment.user_id == user.id,
+    )
+
     comment_db = await db.execute(stmt)
     comment = comment_db.scalar_one_or_none()
 
@@ -38,9 +44,13 @@ async def update_comment(comment_id: int, body: CommentSchema, db: AsyncSession)
     return comment
 
 
-async def delete_comment(comment_id: int,  db: AsyncSession):
+async def delete_comment(comment_id: int,  db: AsyncSession, user: User):
 
     stmt = select(Comment).filter_by(id=comment_id)
+
+    if user.role not in (Role.admin, Role.moderator):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     comment_db = await db.execute(stmt)
     comment = comment_db.scalar_one_or_none()
     if comment:

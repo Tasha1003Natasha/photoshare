@@ -16,6 +16,9 @@ from src.schemas.photo import PhotoResponse, PhotoSchema, PhotoUpdateSchema, Tra
 from src.services.cloudinary import upload_to_cloudinary, build_transformed_url
 from src.conf.config import config
 from src.services.qr_code import create_and_store_qr
+from src.entity.models import User, Role
+from src.services.auth import auth_service
+from src.services.rate_limiter import RateLimiter
 
 
 router = APIRouter(prefix='/photos', tags=['photos'])
@@ -28,7 +31,7 @@ cloudinary.config(
 )
 
 
-@router.get("/all", response_model=list[PhotoResponse])
+@router.get("", response_model=list[PhotoResponse])
 async def get_photos(limit: int = Query(10, ge=10, le=500), offset: int = Query(0, ge=0),
                      query: str | None = Query(None),
                      db: AsyncSession = Depends(get_db)):
@@ -41,12 +44,13 @@ async def upload_photo(
     file: UploadFile = File(...),
     description: str = Form(..., min_length=1, max_length=250),
     tags: list[str] | None = Form(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(auth_service.get_current_user)
 ):
     tag_names = [name.strip() for value in (tags or [])
                  for name in value.split(",")]
 
-    photo_tags = await get_or_create_tags(tag_names, db)
+    photo_tags = await get_or_create_tags(tag_names, db, user)
 
     body = PhotoSchema(
         description=description,
@@ -60,21 +64,22 @@ async def upload_photo(
         public_id=public_id,
         body=body,
         db=db,
-        tags=photo_tags
+        tags=photo_tags,
+        user_id=user.id,
     )
 
     return photo
 
 
 @router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_photo(photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db)):
-    photo = await repositories_photos.delete_photo(photo_id, db)
+async def delete_photo(photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db), user: User = Depends(auth_service.get_current_user)):
+    photo = await repositories_photos.delete_photo(photo_id, db, user)
     return photo
 
 
-@router.put("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_photo(body: PhotoUpdateSchema, photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db)):
-    photo = await repositories_photos.update_photo(photo_id, body, db)
+@router.put("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT, )
+async def update_photo(body: PhotoUpdateSchema, photo_id: int = Path(ge=1), db: AsyncSession = Depends(get_db), user: User = Depends(auth_service.get_current_user)):
+    photo = await repositories_photos.update_photo(photo_id, body, db, user)
     if photo is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
@@ -87,8 +92,9 @@ async def get_photo(
     transformation: Literal["avatar", "resize",
                             "grayscale"] | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(auth_service.get_current_user)
 ):
-    photo = await repositories_photos.get_photo(photo_id, db)
+    photo = await repositories_photos.get_photo(photo_id, db, user)
     if photo is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
@@ -105,8 +111,9 @@ async def transform_photos(
     photo_id: int = Query(..., ge=1),
     transformation: Literal["avatar", "resize", "grayscale"] = Query(...),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(auth_service.get_current_user)
 ):
-    photo = await repositories_photos.get_photo(photo_id, db)
+    photo = await repositories_photos.get_photo(photo_id, db, user)
     if photo is None:
         raise HTTPException(status_code=404, detail="Photo not found")
     if not photo.public_id:
@@ -127,8 +134,9 @@ async def transform_photos(
 async def create_photo_qrcode(
     transformation_id: int = Query(..., ge=1),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(auth_service.get_current_user)
 ):
-    record = await transformations.get_by_id(transformation_id, db)
+    record = await transformations.get_by_id(transformation_id, db, user)
     if record is None:
         raise HTTPException(status_code=404, detail="Transformation not found")
 
