@@ -20,4 +20,4 @@ class PhotoTransformation(Base):
     )
 
     image_url: Mapped[str] = mapped_column(Text, nullable=False)
-    qr_code_url: Mapped[str] = mapped_column(Text, nullable=False)
+    qr_code_url: Mapped[str | None] = mapped_column(Text, nullable=True)

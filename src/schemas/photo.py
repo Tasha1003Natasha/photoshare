@@ -29,6 +29,9 @@ class TransformResponse(BaseModel):
     photo_id: int
     transformation: str
     image_url: str
-    qr_code_url: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class QRCodeResponse(TransformResponse):
+    qr_code_url: str

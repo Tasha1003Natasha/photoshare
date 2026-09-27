@@ -12,7 +12,7 @@ from src.database.db import get_db
 from src.repository import photos as repositories_photos
 from src.repository import transformations
 from src.repository.tags import get_or_create_tags
-from src.schemas.photo import PhotoResponse, PhotoSchema, PhotoUpdateSchema, TransformResponse
+from src.schemas.photo import PhotoResponse, PhotoSchema, PhotoUpdateSchema, TransformResponse, QRCodeResponse
 from src.services.cloudinary import upload_to_cloudinary, build_transformed_url
 from src.conf.config import config
 from src.services.qr_code import create_and_store_qr
@@ -76,7 +76,8 @@ async def update_photo(body: PhotoUpdateSchema, photo_id: int = Path(ge=1), db: 
 @router.get("/{photo_id}", response_class=RedirectResponse)
 async def get_photo(
     photo_id: int = Path(ge=1),
-    transformation: Literal["avatar", "resize", "grayscale"] | None = Query(None),
+    transformation: Literal["avatar", "resize",
+                            "grayscale"] | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     photo = await repositories_photos.get_photo(photo_id, db)
@@ -85,12 +86,12 @@ async def get_photo(
             status_code=status.HTTP_404_NOT_FOUND, detail="NOT FOUND")
     if transformation is not None:
         if not photo.public_id:
-            raise HTTPException(status_code=409, detail="Photo has no Cloudinary public_id")
+            raise HTTPException(
+                status_code=409, detail="Photo has no Cloudinary public_id")
         return RedirectResponse(url=build_transformed_url(photo.public_id, transformation))
     return RedirectResponse(url=photo.url)
 
 
-@router.post("/qrcode", response_model=TransformResponse, status_code=201)
 @router.post("/transform", response_model=TransformResponse, status_code=201)
 async def transform_photos(
     photo_id: int = Query(..., ge=1),
@@ -101,15 +102,30 @@ async def transform_photos(
     if photo is None:
         raise HTTPException(status_code=404, detail="Photo not found")
     if not photo.public_id:
-        raise HTTPException(status_code=409, detail="Photo has no Cloudinary public_id")
+        raise HTTPException(
+            status_code=409, detail="Photo has no Cloudinary public_id")
 
     image_url = build_transformed_url(photo.public_id, transformation)
-    qr_code_url = await create_and_store_qr(image_url)
 
-    return await transformations.create(
+    return await transformations.create_transform(
         photo_id=photo.id,
         transformation=transformation,
         image_url=image_url,
-        qr_code_url=qr_code_url,
         db=db,
     )
+
+
+@router.post("/qrcode", response_model=QRCodeResponse)
+async def create_photo_qrcode(
+    transformation_id: int = Query(..., ge=1),
+    db: AsyncSession = Depends(get_db),
+):
+    record = await transformations.get_by_id(transformation_id, db)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Transformation not found")
+
+    if record.qr_code_url is None:
+        qr_code_url = await create_and_store_qr(record.image_url)
+        record = await transformations.set_qr_code(record, qr_code_url, db)
+
+    return record
