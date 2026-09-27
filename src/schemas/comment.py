@@ -4,7 +4,6 @@ from datetime import datetime
 
 class CommentSchema(BaseModel):
     text: str = Field(min_length=2, max_length=255)
-    photo_id: int
 
 
 class CommentUpdateSchema(CommentSchema):

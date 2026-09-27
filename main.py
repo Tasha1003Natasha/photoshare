@@ -7,7 +7,8 @@ from src.entity.photo import Photo
 from src.entity.tag import Tag
 from src.entity.comment import Comment
 from src.database.db import get_db
-from src.routes import photos
+from src.routes import photos, comments
+
 
 app = FastAPI()
 
@@ -22,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(photos.router, prefix="/api")
+app.include_router(comments.router, prefix="/api")
 
 
 @app.get("/")
