@@ -50,7 +50,7 @@ async def upload_photo(
     tag_names = [name.strip() for value in (tags or [])
                  for name in value.split(",")]
 
-    photo_tags = await get_or_create_tags(tag_names, db, user)
+    photo_tags = await get_or_create_tags(tag_names, db)
 
     body = PhotoSchema(
         description=description,

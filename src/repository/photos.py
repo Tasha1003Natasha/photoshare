@@ -31,7 +31,8 @@ async def create_photo(
     public_id: str,
     body: PhotoSchema,
     db: AsyncSession,
-    tags: list[Tag]
+    tags: list[Tag],
+    user_id: int
 ) -> Photo:
 
     photo = Photo(
@@ -39,7 +40,7 @@ async def create_photo(
         public_id=public_id,
         description=body.description,
         tags=tags,
-
+        user_id=user_id,
     )
 
     db.add(photo)
@@ -52,7 +53,7 @@ async def create_photo(
 async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession, user: User):
 
     stmt = select(Photo).options(
-        selectinload(Photo.tags)).filter_by(id=photo_id, user=user)
+        selectinload(Photo.tags)).filter_by(id=photo_id)
 
     if user.role != Role.admin:
         stmt = stmt.where(Photo.user_id == user.id)
@@ -62,7 +63,10 @@ async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession,
     if photo:
         if body.tags is not None:
             photo.tags = await get_or_create_tags(body.tags, db)
-        photo.description = body.description
+
+        if "description" in body.model_fields_set:
+            photo.description = body.description
+
         await db.commit()
         await db.refresh(photo)
         await db.refresh(photo, attribute_names=["tags"])
@@ -71,7 +75,7 @@ async def update_photo(photo_id: int, body: PhotoUpdateSchema, db: AsyncSession,
 
 async def delete_photo(photo_id: int, db: AsyncSession, user: User):
 
-    stmt = select(Photo).filter_by(id=photo_id, user=user)
+    stmt = select(Photo).filter_by(id=photo_id)
 
     if user.role != Role.admin:
         stmt = stmt.where(Photo.user_id == user.id)
@@ -86,7 +90,7 @@ async def delete_photo(photo_id: int, db: AsyncSession, user: User):
 
 async def get_photo(photo_id: int, db: AsyncSession, user: User):
 
-    stmt = select(Photo).filter_by(id=photo_id, user=user)
+    stmt = select(Photo).filter_by(id=photo_id)
 
     if user.role != Role.admin:
         stmt = stmt.where(Photo.user_id == user.id)

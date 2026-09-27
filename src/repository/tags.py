@@ -1,11 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.entity.models import User
 from src.entity.tag import Tag
 
 
-async def get_or_create_tags(names: list[str], db: AsyncSession, user: User):
+async def get_or_create_tags(names: list[str], db: AsyncSession):
     if len(names) > 5:
         raise HTTPException(status_code=422, detail="Maximum of 5 tags")
 
