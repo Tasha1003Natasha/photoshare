@@ -63,6 +63,17 @@ async def update_token(user: User, token: str | None, db: AsyncSession):
     await db.commit()
 
 
+async def update_role(user: User, role: Role, db: AsyncSession) -> User:
+    user.role = role
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    await db.refresh(user)
+    return user
+
+
 async def confirmed_email(email: str, db: AsyncSession) -> None:
     user = await get_user_by_email(email, db)
     user.confirmed = True

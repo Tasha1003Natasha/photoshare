@@ -15,8 +15,9 @@ from src.services.rate_limiter import RateLimiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.db import get_db
-from src.entity.models import User
-from src.schemas.user import UserResponse
+from src.entity.models import User, Role
+from src.schemas.user import UserResponse, UserRoleUpdate, UserRoleResponse
+from starlette.concurrency import run_in_threadpool
 from src.services.auth import auth_service
 from src.conf.config import config
 from src.repository import users as repositories_users
@@ -37,6 +38,46 @@ cloudinary.config(
 )
 async def get_current_user(user: User = Depends(auth_service.get_current_user)):
     return user
+
+
+@router.get("/admin", response_model=dict[str, str])
+async def admin_access(user: User = Depends(auth_service.get_current_user)):
+    if user.role != Role.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required",
+        )
+    return {"message": "Administrator access granted"}
+
+
+@router.get("/moderator", response_model=dict[str, str])
+async def moderator_access(user: User = Depends(auth_service.get_current_user)):
+    if user.role not in (Role.admin, Role.moderator):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or administrator access required",
+        )
+    return {"message": "Moderator access granted"}
+
+
+@router.patch("/role", response_model=UserRoleResponse)
+async def change_user_role(
+    body: UserRoleUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(auth_service.get_current_user),
+):
+    # Read current permissions from the database rather than the cached user.
+    admin = await repositories_users.get_user_by_email(user.email, db)
+    if admin is None or admin.role != Role.admin:
+        raise HTTPException(status_code=403, detail="Administrator access required")
+
+    target = await repositories_users.get_user_by_email(body.email, db)
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    target = await repositories_users.update_role(target, body.role, db)
+    await run_in_threadpool(auth_service.cache.delete, target.email)
+    return UserRoleResponse(id=target.id, email=target.email, role=target.role)
 
 
 @router.patch(

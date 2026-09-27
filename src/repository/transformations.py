@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.entity.models import User
+from src.entity.models import User, Role
 from src.entity.transformation import PhotoTransformation
 from src.entity.photo import Photo
 from sqlalchemy import select
@@ -36,9 +36,11 @@ async def get_by_id(
         .join(Photo, Photo.id == PhotoTransformation.photo_id)
         .where(
             PhotoTransformation.id == transformation_id,
-            Photo.user_id == user.id,
         )
     )
+
+    if user.role != Role.admin:
+        stmt = stmt.where(Photo.user_id == user.id)
 
     result = await db.execute(stmt)
     return result.scalar_one_or_none()

@@ -32,6 +32,17 @@ class RequestEmail(BaseModel):
     email: EmailStr
 
 
+class UserRoleUpdate(BaseModel):
+    email: EmailStr
+    role: Role
+
+
+class UserRoleResponse(BaseModel):
+    id: int
+    email: EmailStr
+    role: Role
+
+
 class ResetPassword(BaseModel):
     token: str
     password: str = Field(min_length=6, max_length=8)
