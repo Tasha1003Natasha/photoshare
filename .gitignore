@@ -6,3 +6,5 @@ venv/
 *.log
 dist/
 .env
+fly.toml
+**/.env
